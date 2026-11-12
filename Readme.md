@@ -1,10 +1,10 @@
 # StegaQEntropy
 
-### An Entropy-Driven Adaptive Quantum–Classical Image Steganography Framework with Hierarchical Quantum Surrogate Modeling, QRNG, and QKD
+### An Entropy-Driven Adaptive Reversible Image Steganography Framework with Multimodal Surrogate Learning and Quantum-Assisted Region Selection and Security
 
-StegaQEntropy is a hybrid quantum–classical image steganography framework that integrates image-statistical intelligence, entropy analysis, discrete wavelet transform (DWT), machine-learning-based regional characterization, SQE-Net, QOQA/QAOA-based optimization, ACER, quantum random number generation (QRNG), and hierarchical quantum-key coordination for adaptive information embedding.
+**StegaQEntropy** is a hybrid classical–quantum reversible image steganography framework that integrates image-statistical intelligence, single-level `db2` discrete wavelet transform (DWT) analysis, multimodal surrogate modeling (**SQE-Net**, **QOQA**, and **ACER**), physical quantum random number generation (**QRNG** on IBM Quantum `ibm_fez`), and hierarchical **BB84 QKD** session coordination.
 
-This repository contains the implementation code, experimental artifacts, benchmark-image acquisition support, QRNG verification outputs, DWT processing results, machine-learning datasets, adaptive embedding/extraction pipeline, and supporting scripts used in the experiments reported in the associated research article.
+To preserve **exact, bit-for-bit cover reversibility** ($\text{BER} = 0$, $\text{MSE}_{\text{recon}} = 0$) without transform-domain rounding errors, DWT subbands are used strictly as an analysis domain while secret data is embedded directly in the **8-bit integer pixel domain** via ML-guided reversible **Prediction-Error Expansion (PEE)**. The QOQA-selected region map is encrypted with the QKD master key ($K_M$) and hidden inside key-seeded reserved pixels, requiring no separate mask or reversal metadata over public channels.
 
 ---
 
@@ -13,92 +13,81 @@ This repository contains the implementation code, experimental artifacts, benchm
 The StegaQEntropy framework follows the following overall pipeline:
 
 ```text
-                         Cover Image
-                              │
-                              ▼
-                 ┌────────────────────────┐
-                 │ Image Acquisition &    │
-                 │ Capacity Estimation    │
-                 └────────────┬───────────┘
-                              │
-                              ▼
-                 ┌────────────────────────┐
-                 │ Entropy & Image        │
-                 │ Intelligence Analysis  │
-                 └────────────┬───────────┘
-                              │
-                  ┌───────────┴───────────┐
-                  │                       │
-                  ▼                       ▼
-        ┌──────────────────┐    ┌──────────────────┐
-        │ ML / SQE-Net     │    │ DWT Decomposition│
-        │ Regional Model   │    │ LL/LH/HL/HH      │
-        └────────┬─────────┘    └────────┬─────────┘
-                 │                       │
-                 └───────────┬───────────┘
-                             ▼
-                  ┌───────────────────────┐
-                  │ QOQA / QAOA Region    │
-                  │ Selection / Optimization│
-                  └───────────┬───────────┘
-                              │
-                              ▼
-                  ┌───────────────────────┐
-                  │ ACER Global Fidelity  │
-                  │ Estimation             │
-                  └───────────┬───────────┘
-                              │
-                              ▼
-                  ┌───────────────────────┐
-                  │ QRNG + Hierarchical   │
-                  │ QKD Key Coordination  │
-                  └───────────┬───────────┘
-                              │
-                              ▼
-                  ┌───────────────────────┐
-                  │ Adaptive DWT-Domain   │
-                  │ Embedding              │
-                  └───────────┬───────────┘
-                              │
-                              ▼
-                  ┌───────────────────────┐
-                  │ Floating-Point Stego  │
-                  │ Image                  │
-                  └───────────┬───────────┘
-                              │
-                              ▼
-                  ┌───────────────────────┐
-                  │ Extraction &          │
-                  │ Verification           │
-                  └───────────────────────┘
+                         Cover Image (8-bit Grayscale)
+                                      │
+                                      ▼
+                       ┌─────────────────────────────┐
+                       │ Image Acquisition &         │
+                       │ PEE Capacity Estimation     │
+                       └──────────────┬──────────────┘
+                                      │
+                       ┌──────────────┴──────────────┐
+                       ▼                             ▼
+        ┌──────────────────────────┐   ┌──────────────────────────┐
+        │ Entropy & Image          │   │ db2 DWT Decomposition    │
+        │ Intelligence Analysis    │   │ {LL, LH, HL, HH}         │
+        │ (Analysis Domain Only)   │   │ (Analysis Domain Only)   │
+        └─────────────┬────────────┘   └─────────────┬────────────┘
+                      └──────────────┬───────────────┘
+                                     ▼
+                       ┌─────────────────────────────┐
+                       │ Multimodal Surrogate &      │
+                       │ SQE-Net (64-Qubit Regional) │
+                       └──────────────┬──────────────┘
+                                      │
+                                      ▼
+                       ┌─────────────────────────────┐
+                       │ QOQA / QAOA Region          │
+                       │ Selection (E_8, K=275)      │
+                       └──────────────┬──────────────┘
+                                      │
+                                      ▼
+                       ┌─────────────────────────────┐
+                       │ Classical Q/K/V Attention   │
+                       │ + ACER (32-Qubit Global)    │
+                       └──────────────┬──────────────┘
+                                      │
+                                      ▼
+                       ┌─────────────────────────────┐
+                       │ IBM QRNG (ibm_fez) +        │
+                       │ Hierarchical BB84 QKD Keys  │
+                       └──────────────┬──────────────┘
+                                      │
+                                      ▼
+                       ┌─────────────────────────────┐
+                       │ Integer Pixel-Domain PEE    │
+                       │ (Payload + Hidden ML Map)   │
+                       └──────────────┬──────────────┘
+                                      │
+                                      ▼
+                         Stego Image (8-bit Integer)
+                                      │
+                                      ▼
+                       ┌─────────────────────────────┐
+                       │ Receiver Extraction &       │
+                       │ Bit-Exact Cover Restoration │
+                       └─────────────────────────────┘
 ```
-
-The framework operates on **floating-point image representations**. The reported experiments are based on the floating-point processing model used by the implementation.
-
----
 
 ### Reproducibility and First Run
 
-The generated output files and intermediate results are not included in the repository because they can be regenerated by executing the complete pipeline. After cloning the repository and installing the required dependencies, run the project from the beginning using `main.py` and execute the complete pipeline. Each module generates its required outputs, which are subsequently used by the following modules. The required output directories and intermediate files will therefore be created automatically during execution.
+Generated output files and intermediate artifacts can be regenerated from scratch by executing the pipeline via `main.py` followed by `src/adaptive_embedding.py`. Before running, update any local input/output paths in `ml_module/ml_configuration.py` and `src/` to match the local directory of the cloned repository (`Cover_images/`, `Secret_Images/`, and `output/`).
 
-Before execution, update any input file paths in the configuration or corresponding scripts to match the local location of the cloned repository. The paths should point to the respective project folders (such as `Cover_images`, `Secret_Images`, and generated `output` directories) on the user's system and should not depend on the original developer's local directory structure.
+### Payload Configurations
 
-This ensures that the complete pipeline can be reproduced on another system without requiring the large generated output files to be stored in the GitHub repository.
+* **Consolidated 20,000-Bit Benchmark (`Secret_Images/TextData.txt`):** The primary evaluation fixes a consolidated budget of $M_{\text{total}} = 20,000$ bits per carrier, encompassing the 64-bit synchronization header, the encrypted secret text payload ($19,664$ bits for $512\times 512$; $19,536$ bits for $512\times 768$), and the internalized encrypted ML region map ($272$ bits for $512\times 512$; $400$ bits for $512\times 768$).
+* **High-Payload RGB Secret-Image Mode ($41,065$ bits):** For image-hiding experiments, an input RGB secret image is resized to $128\times 128$ pixels and JPEG-compressed with adaptive quality selection to satisfy the target payload budget ($40,793$-bit protected stream + $272$-bit ML map). The receiver extracts the compressed bitstream and reconstructs the secret image without needing the original secret image file.
 
-## Secret Image Payload Preparation
-
-- The uploaded secret image is converted into a compact, payload-bounded representation before embedding.
-- The compressed representation, rather than the original uncompressed image data, is used as the image payload transmitted through the steganographic channel.
-- For the ~26K-bit experimental configuration, sender-side compression is used to satisfy the predefined payload budget before embedding.
-- The receiver does not require the original secret image; it extracts the compressed representation and reconstructs the secret image from the recovered payload.
-- The compressed payload is subsequently processed by the existing QRNG-driven chunking and security pipeline.
+---
 
 # 2. Repository Structure
 
-The repository is organized into implementation modules, benchmark data/acquisition, QRNG components, experimental artifacts, and reproducibility material.
-
 ```text
 StegaQEntropy/
+│
+├── main.py
+├── requirements.txt
+├── README.md
 │
 ├── Cover_images/
 │   ├── lena512.jpg
@@ -106,10 +95,17 @@ StegaQEntropy/
 │   ├── lake512.jpg
 │   ├── boat512.jpg
 │   ├── peppers512.jpg
-│   └── A16 / Airplane benchmark image
+│   └── A16.jpg
 │
 ├── Secret_Images/
-│   └── Secret-image inputs used in the experiments
+│   └── TextData.txt
+│
+├── src/
+│   ├── image_acquisition.py
+│   ├── capacity_estimation.py
+│   ├── dwt_decomposition.py
+│   ├── entropy_intelligence_engine.py
+│   └── adaptive_embedding.py
 │
 ├── ml_module/
 │   ├── dataset_builder.py
@@ -136,105 +132,38 @@ StegaQEntropy/
 │   ├── transpiler.py
 │   └── output/
 │
-├── output/
-│   ├── adaptive_embedding/
-│   ├── dwt_decomposition/
-│   ├── message_preparation/
-│   ├── output_modules/
-│   └── quantum_key_hierarchy/
-│
-├── requirements.txt
-└── README.md
+└── output/
+    ├── adaptive_embedding/
+    ├── dwt_decomposition/
+    ├── message_preparation/
+    ├── output_modules/
+    └── quantum_key_hierarchy/
 ```
 
-Generated Python cache directories such as `__pycache__/` should not be included.
-
 ---
-
-The Secret Text data for 20k Bits is stored as Secret_Images/TextData.txt
 
 # 3. Core Implementation
 
 ## 3.1 Image Acquisition and Capacity Estimation
 
-The image acquisition and capacity-estimation stages characterize the input cover image and estimate its embedding suitability.
+These stages load the 8-bit grayscale cover image, extract global statistical and GLCM texture descriptors (entropy, variance, gradient, contrast, homogeneity, energy), and compute theoretical ($C_{\text{th}} = MN$) and usable integer pixel-domain PEE capacities ($C_{\text{pee}}$).
 
-Relevant execution artifacts are available under:
-
-```text
-output/output_modules/
-```
-
-including:
-
-```text
-capacity_estimation_Execution.txt
-image_acquisition_Execution.txt
-```
-
-Run:
-
-```bash
-python src/capacity_estimation.py
-```
-
-and:
+* **Scripts:** `src/image_acquisition.py`, `src/capacity_estimation.py`
+* **Execution Artifacts (`output/output_modules/`):** `image_acquisition_Execution.txt`, `capacity_estimation_Execution.txt`
 
 ```bash
 python src/image_acquisition.py
+python src/capacity_estimation.py
 ```
-
-if these modules are included in the final source layout.
 
 ---
 
-# 4. DWT Decomposition
+# 4. DWT Decomposition (Analysis Domain Only)
 
-The framework performs DWT decomposition using the configured wavelet transform.
+Performs a single-level two-dimensional Daubechies-2 (`db2`) Discrete Wavelet Transform producing `{LL, LH, HL, HH}` subbands. These subbands supply spectral patches ($16\times 16\times 4$) and regional subband energies to the surrogate model, while **no embedding modification is performed in the wavelet domain** to avoid floating-point rounding errors.
 
-The decomposition produces:
-
-```text
-LL
-LH
-HL
-HH
-```
-
-The LL subband is preserved according to the embedding design, while the detail subbands are used for regional analysis and adaptive embedding.
-
-Relevant artifacts are stored under:
-
-```text
-output/dwt_decomposition/
-```
-
-including:
-
-```text
-LL.npy
-LH.npy
-HL.npy
-HH.npy
-
-LL_normalized.npy
-LH_normalized.npy
-HL_normalized.npy
-HH_normalized.npy
-```
-
-Additional metadata include:
-
-```text
-dwt_metadata.json
-dwt_coefficients.json
-candidate_regions.json
-adaptive_regions.json
-band_priority.json
-coefficient_statistics.json
-```
-
-Run the DWT decomposition using:
+* **Script:** `src/dwt_decomposition.py`
+* **Artifacts (`output/dwt_decomposition/`):** `LL.npy`, `LH.npy`, `HL.npy`, `HH.npy`, `LL_normalized.npy`, `LH_normalized.npy`, `HL_normalized.npy`, `HH_normalized.npy`, `dwt_metadata.json`, `dwt_coefficients.json`, `candidate_regions.json`, `adaptive_regions.json`, `band_priority.json`, `coefficient_statistics.json`
 
 ```bash
 python src/dwt_decomposition.py
@@ -244,723 +173,142 @@ python src/dwt_decomposition.py
 
 # 5. Entropy Intelligence and Regional Analysis
 
-The entropy-intelligence stage extracts image and regional characteristics used for adaptive embedding decisions.
+Extracts multi-domain regional descriptors across candidate $32\times 32$ blocks—including Shannon entropy, relative entropy, entropy gradient, GLCM texture measures, and graph centrality—and classifies blocks into `PRIMARY`, `SECONDARY`, `TERTIARY`, and `REJECTED` tiers.
 
-The analysis incorporates the statistical and structural characteristics used by the framework, including entropy, texture, gradient, and related regional descriptors.
-
-Run:
+* **Script:** `src/entropy_intelligence_engine.py`
+* **Execution Artifact (`output/output_modules/`):** `entropy_intelligence_engine_Execution.txt`
 
 ```bash
 python src/entropy_intelligence_engine.py
 ```
 
-The corresponding execution record is available under:
-
-```text
-output/output_modules/
-```
-
-as:
-
-```text
-entropy_intelligence_engine_Execution.txt
-```
-
 ---
 
-# 6. SQE-Net / Surrogate Modeling
+# 6. SQE-Net / Multimodal Surrogate Modeling
 
-The machine-learning module contains the dataset construction, cleaning, analysis, and surrogate-model components.
+Constructs multimodal regional representations ($32\times 32$ raw patches, $16\times 16\times 4$ `db2` DWT patches, and regional intelligence vectors) and runs controlled post-embedding 8-neighbour stress analysis ($P_{\text{safe}}, P_{\text{risk}}$) alongside Gaussian PDF/CDF probability modeling. **SQE-Net** processes the fused features using **64 logical qubits** (eight independent 8-qubit registers simulated via $2^8 = 256$ complex amplitudes with $R_Y/R_Z$ rotations, Hadamard gates, and cyclic CNOT rings) to predict seven regional suitability objectives.
 
-```text
-ml_module/
-├── dataset_builder.py
-├── dataset_cleaner.py
-├── gaussian_probability_plot.py
-├── ml_configuration.py
-├── ml_random_manager.py
-├── post_embedding_analysis_fixed.py
-└── surrogate_model.py
-```
-
-The module produces and processes the regional intelligence datasets used by the framework.
-
-Important artifacts include:
-
-```text
-master_dataset.csv
-master_dataset.json
-master_dataset.npy
-dataset_manifest.json
-dataset_statistics.json
-```
-
-Post-embedding analysis includes datasets such as:
-
-```text
-actual_post_embedding_complete_dataset.csv
-actual_post_embedding_dataset.csv
-actual_post_embedding_final_dataset.csv
-actual_post_embedding_ml_dataset.csv
-actual_post_embedding_ml_targets.csv
-actual_post_prediction_targets.csv
-actual_post_region_ranking.csv
-actual_region_prediction_summary.csv
-actual_safe_capacity.csv
-final_embedding_candidates.json
-final_region_embedding_decisions.csv
-region_priority_groups.json
-```
-
-Run the corresponding module using:
+* **Scripts (`ml_module/`):** `dataset_builder.py`, `dataset_cleaner.py`, `post_embedding_analysis_fixed.py`, `gaussian_probability_plot.py`, `surrogate_model.py`, `ml_configuration.py`, `ml_random_manager.py`
+* **Artifacts (`ml_module/output/`):**
+  * Datasets: `master_dataset.csv`, `master_dataset.json`, `master_dataset.npy`, `dataset_manifest.json`, `dataset_statistics.json`
+  * Post-embedding analysis: `actual_post_embedding_complete_dataset.csv`, `actual_post_embedding_dataset.csv`, `actual_post_embedding_final_dataset.csv`, `actual_post_embedding_ml_dataset.csv`, `actual_post_embedding_ml_targets.csv`, `actual_post_prediction_targets.csv`, `actual_post_region_ranking.csv`, `actual_region_prediction_summary.csv`, `actual_safe_capacity.csv`, `final_embedding_candidates.json`, `final_region_embedding_decisions.csv`, `region_priority_groups.json`
 
 ```bash
 python ml_module/surrogate_model.py
 ```
-
-where applicable to the configured experimental workflow.
 
 ---
 
 # 7. QOQA / QAOA Optimization
 
-QOQA formulates the regional-selection problem as a quantum-assisted optimization problem.
+**QOQA** formulates regional selection as a Quadratic Unconstrained Binary Optimization (QUBO) problem mapped to an Ising Hamiltonian, enforcing strict 8-neighbour spatial exclusion ($E_8$) and a target quota of $K = 275$ regions. It executes depth-1 QAOA ($P = 1$, $N_{\text{shots}} = 1024$) across partitioned sub-blocks ($m_b \le 8$) via state-vector simulation to select conflict-free, distortion-tolerant candidate regions.
 
-The repository contains the corresponding quantum optimization implementation and supporting circuit/visualization artifacts.
-
-The reported configuration includes the QAOA/QUBO optimization stage and spatial exclusion constraints used for regional selection.
-
-Quantum visualization artifacts include:
-
-```text
-02_sqe_net_internal_architecture.png
-03_sqe_net_8_qubit_circuit.png
-06_qoqa_corrected_pipeline.png
-07_qoqa_qubo_formulation.png
-08_qoqa_qubo_to_ising.png
-10_qoqa_qaoa_style_block_circuit.png
-```
-
-The corresponding implementation should be executed using the source module included in the final repository.
+* **Visualization Artifacts (`ml_module/output/`):** `02_sqe_net_internal_architecture.png`, `03_sqe_net_8_qubit_circuit.png`, `06_qoqa_corrected_pipeline.png`, `07_qoqa_qubo_formulation.png`, `08_qoqa_qubo_to_ising.png`, `10_qoqa_qaoa_style_block_circuit.png`
 
 ---
 
-# 8. ACER
+# 8. ACER Global Quality Estimation
 
-ACER is used as the global quantum-assisted fidelity estimation stage after regional selection.
+Following QOQA selection, selected regional embeddings are aggregated via classical masked scaled dot-product $Q/K/V$ attention and passed into **ACER**, which uses **32 logical qubits** (four independent 8-qubit registers with cyclic CNOT entanglement) to predict holistic carrier PSNR prior to pixel expansion.
 
-Supporting artifacts include:
-
-```text
-09_region_latent_acer_representation.png
-10_acer_angle_encoding.png
-11_full_32_qubit_acer_circuit.png
-27_acer_qoqa_circuit_description.txt
-```
-
-The implementation and generated artifacts are included to allow inspection of the ACER processing stage.
+* **Visualization Artifacts (`ml_module/output/`):** `09_region_latent_acer_representation.png`, `10_acer_angle_encoding.png`, `11_full_32_qubit_acer_circuit.png`, `27_acer_qoqa_circuit_description.txt`
 
 ---
 
-# 9. QRNG
+# 9. QRNG & NIST SP 800-22 Verification
 
-The QRNG subsystem contains the quantum-randomness generation and analysis components:
+Acquires physical quantum randomness from the 156-qubit IBM Quantum processor (`ibm_fez`) using 32 physical qubits executing Hadamard superposition and computational-basis measurement ($6 \text{ blocks} \times 16,384 \text{ shots} = 3,145,728$ bits). The generated bitstream is validated across all 15 NIST SP 800-22 statistical test families at $\alpha = 0.01$ and stored in a verified seed pool.
 
-```text
-qrng/
-├── backend_manager.py
-├── ibm_connection.py
-├── ibm_test.py
-├── qrng_pool.py
-├── qrng_randomness_engine.py
-├── qrng_summary.py
-├── quantum_circuit.py
-├── quantum_execution.py
-├── randomness_tests.py
-├── seed_manager.py
-├── state_analysis.py
-└── transpiler.py
-```
-
-The generated QRNG artifacts include:
-
-```text
-qrng/output/qrng_pool.bin
-qrng/output/qrng_pool.txt
-qrng/output/qrng_pool_history.txt
-qrng/output/qrng_pool_summary.txt
-qrng/output/qrng_statistics.txt
-qrng/output/randomness_report.txt
-qrng/output/qrng_final_report.txt
-qrng/output/backend_information.txt
-```
-
-Additional visualizations include:
-
-```text
-autocorrelation.png
-frequency_distribution.png
-statevector.png
-density_matrix.png
-bloch_sphere.png
-logical_qrng_circuit.png
-measurement_qrng_circuit.png
-transpiled_circuit.png
-transition_plot.png
-```
+* **Scripts (`qrng/`):** `backend_manager.py`, `ibm_connection.py`, `ibm_test.py`, `qrng_pool.py`, `qrng_randomness_engine.py`, `qrng_summary.py`, `quantum_circuit.py`, `quantum_execution.py`, `randomness_tests.py`, `seed_manager.py`, `state_analysis.py`, `transpiler.py`
+* **Artifacts (`qrng/output/`):** `qrng_pool.bin`, `qrng_pool.txt`, `qrng_pool_history.txt`, `qrng_pool_summary.txt`, `qrng_statistics.txt`, `randomness_report.txt`, `qrng_final_report.txt`, `backend_information.txt`, plus statevector/Bloch/circuit diagnostic plots.
 
 ---
 
-# 10. QRNG Bitstream and NIST SP 800-22 Verification
+# 10. Seed and History Verification
 
-The repository includes the QRNG bitstream and corresponding randomness-analysis outputs referenced by the manuscript.
+Maintains tamper-evident module seed records derived from the verified `ibm_fez` QRNG bitstream so experimental runs can be audited and reproduced. Authoritative seed files under `final_verified_seeds/` should be read rather than overwritten.
 
-The QRNG verification material should be retained in the repository together with the NIST analysis scripts and results.
-
-If the final repository contains the NIST runner described in the experimental documentation, execute:
-
-```bash
-python qrng/nist_suite/run_nist_suite.py --bitstream qrng/bitstreams/ibm_fez_32q_run.bin
-```
-
-The generated/retained outputs should include the NIST summary and relevant statistical results.
-
-The QRNG material documents the physical randomness generation used in the reported experiments.
+* **Artifacts (`qrng/output/history_check/`):** `history_database.txt`, `history_summary.txt`, `final_verified_seeds/` (`dwt_seed_verified.txt`, `entropy_seed_verified.txt`, `qkd_seed_verified.txt`, `region_seed_verified.txt`, `adaptive_embedding_seed_verified.txt`, `extraction_seed_verified.txt`, `verification_seed_verified.txt`), `regenerated_seeds/`, `verified_seeds/`
 
 ---
 
-# 11. Seed and History Verification
+# 11. Hierarchical Quantum Key Management
 
-Seed files and history-verification artifacts are available under:
+Simulates BB84 QKD sessions using physical QRNG entropy (with a 10% sacrificial QBER check and HMAC confirmation) to establish a 128-bit master key ($K_M$) and 32 independent 63-bit chunk subkeys ($K_j$). $K_M$ masks the global stream, seeds tie-breaking pixel ordering, locates reserved pixels, and encrypts the hidden ML map, while subkeys protect individual payload chunks and are never embedded.
 
-```text
-qrng/output/history_check/
-```
+* **Artifacts (`output/quantum_key_hierarchy/`):** `chunk_key_mapping.json`, `dependency_report.json`, `embedding_readiness.json`, `hierarchy.json`, `hierarchy_report.txt`, `key_configuration.json`, `manifest.json`, `qkd_package.json`, `qkd_plan.json`, `readiness.json`, `security_analysis.json`, `statistics.json`
 
-including:
-
-```text
-history_database.txt
-history_summary.txt
-final_verified_seeds/
-regenerated_seeds/
-verified_seeds/
-```
-
-The verified seed directory contains module-associated seed records, including:
-
-```text
-dwt_seed_verified.txt
-entropy_seed_verified.txt
-qkd_seed_verified.txt
-region_seed_verified.txt
-adaptive_embedding_seed_verified.txt
-extraction_seed_verified.txt
-verification_seed_verified.txt
-...
-```
-
-The original seed records should remain unchanged. Verification procedures should read the authoritative seed records rather than overwrite them.
+> **Simulation Disclosure:** BB84 QKD sessions and quantum circuit stages (SQE-Net, QOQA, ACER) are executed via classical Qiskit Aer/state-vector simulation; the reported $\text{QBER} = 0$ corresponds to an ideal noiseless simulation without an eavesdropper rather than a physical optical channel.
 
 ---
 
-# 12. Hierarchical Quantum Key Management
+# 12. Adaptive Integer Pixel-Domain Embedding and Extraction
 
-Quantum-key-management artifacts are stored under:
+Embeds secret data directly in the **8-bit integer pixel domain** via two-layer checkerboard reversible Prediction-Error Expansion (PEE, $\max \vert{}\Delta\vert{} \le 1$), scaling roughness by $\lambda_{\text{ML}} = 0.75$ inside QOQA-selected regions and breaking ties via $K_M$. The encrypted ML region bitmap ($272$ bits for $512\times 512$; $400$ bits for $512\times 768$) is embedded into a disjoint $K_M$-seeded reserved pixel set, enabling exact payload recovery and lossless cover restoration ($\text{BER} = 0$, $\text{MSE}_{\text{recon}} = 0$) with zero side-channel metadata.
 
-```text
-output/quantum_key_hierarchy/
-```
+* **Script:** `src/adaptive_embedding.py`
+* **Artifacts (`output/adaptive_embedding/`):** `adaptive_embedding_metrics.json`, `adaptive_embedding_plan.json`, `adaptive_stego.png` / `.npy`, `extracted_message.bin`, `selected_embedding_regions.png`
 
-including:
-
-```text
-chunk_key_mapping.json
-dependency_report.json
-embedding_readiness.json
-hierarchy.json
-hierarchy_report.txt
-key_configuration.json
-manifest.json
-qkd_package.json
-qkd_plan.json
-readiness.json
-security_analysis.json
-statistics.json
-```
-
-These artifacts support inspection of the hierarchical key-generation and synchronization process used by the framework.
-
----
-
-# 13. Adaptive Embedding and Extraction
-
-The adaptive embedding pipeline integrates:
-
-* Regional selection
-* DWT-domain embedding
-* Payload chunking
-* QRNG-based coordination
-* Hierarchical key management
-* QKD synchronization
-* Sender/receiver processing
-* Extraction and verification
-
-The principal implementation is:
-
-```text
-src/adaptive_embedding.py
-```
-
-For the configured Windows execution mode:
-
+**Single-Terminal Run:**
 ```bash
 python src/adaptive_embedding.py
 ```
 
-For manual sender/receiver execution:
-
-### Terminal 1 — Receiver
-
+**Manual Two-Terminal Sender / Receiver Execution:**
 ```bash
+# Terminal 1 — Receiver
 python src/adaptive_embedding.py receiver
-```
 
-### Terminal 2 — Sender
-
-```bash
+# Terminal 2 — Sender
 python src/adaptive_embedding.py sender
 ```
 
-The adaptive-embedding outputs include:
+---
 
-```text
-adaptive_embedding_metrics.json
-adaptive_embedding_plan.json
-adaptive_stego.npy
-extracted_message.bin
-selected_embedding_regions.png
-```
+# 13. Benchmark Cover Images
 
-along with the corresponding verification artifacts.
+Evaluations use six standard $512 \times 512$ 8-bit grayscale USC-SIPI benchmark images (`lena512.jpg`, `barbara512.jpg`, `lake512.jpg`, `boat512.jpg`, `peppers512.jpg`, `A16.jpg`) stored in `Cover_images/`, along with 19 grayscale-converted $512 \times 768$ Kodak images (`kodim01–07`, `09–12`, `14–17`, `19`, `21–23`). Standard USC-SIPI images are available from the [USC-SIPI Image Database](https://sipi.usc.edu/database/).
 
 ---
 
-# 14. Floating-Point Experimental Model
+# 14. Execution Traceability Logs
 
-The reported experiments use a **floating-point image-processing workflow**.
+Module-level execution records are saved under `output/output_modules/` for full pipeline traceability:
 
-The stego image remains in the floating-point representation used by the experimental pipeline, and the reported fidelity and extraction results correspond to this operating model.
-
-The framework uses small adaptive embedding perturbations while retaining the numerical precision of the floating-point representation.
-
-The repository therefore does **not** use an 8-bit PNG round-trip as part of the reported experimental protocol.
-
-No PNG round-trip experiment or PNG-based BER claim is made in this repository.
-
----
-# 15. USC-SIPI Benchmark Images
-
-The experiments use six standard $512 \times 512$ grayscale benchmark images.
-
-The benchmark images used by the experimental pipeline are stored locally in:
-
-```text
-Cover_images/
-```
-
-The current benchmark-image collection includes:
-
-```text
-Cover_images/
-├── barbara512.jpg
-├── boat512.jpg
-├── lake512.jpg
-├── lena512.jpg
-├── peppers512.jpg
-└── <sixth benchmark image>
-```
-
-The images are used as the cover-image inputs for the image characterization, DWT decomposition, regional intelligence, adaptive embedding, and evaluation stages.
-
-The benchmark images originate from standard image-benchmark collections, including the USC-SIPI Image Database where applicable.
-
-### USC-SIPI Source
-
-The official USC-SIPI Image Database is available at:
-
-[USC-SIPI Image Database](https://sipi.usc.edu/database/?utm_source=chatgpt.com)
-
-The repository does not provide a separate `download_benchmarks.py` script. Users requiring the benchmark images should obtain them from their respective official source and place the required files under:
-
-```text
-Cover_images/
-```
-
-# 16. Experimental Results and Table Traceability
-
-The numerical results reported in the manuscript are generated by the individual experimental modules of the StegaQEntropy framework and subsequently organized into the manuscript tables.
-
-The repository therefore retains the **source datasets, execution outputs, analysis files, and experimental artifacts from which the reported values were obtained**.
-
-The manuscript tables are not generated by separate `generate_table1.py`, `generate_table2.py`, or `generate_table3_s2.py` scripts.
-
-Instead, the reported values are assembled from the corresponding experimental outputs described below.
+* `image_acquisition_Execution.txt`
+* `capacity_estimation_Execution.txt`
+* `qrng_randomness_engine_Execution.txt`
+* `history_checker_Execution.txt`
+* `message_preparation_Execution.txt`
+* `quantum_key_hierarchy_Execution.txt`
+* `dwt_decomposition_Execution.txt`
+* `entropy_intelligence_engine_Execution.txt`
+* `dataset_builder_Execution.txt`
+* `post_embedding_analysis_fixed_Execution.txt`
+* `gaussian_probability_plot_Execution.txt`
+* `surrogate_model_Execution.txt`
 
 ---
 
-## 16.1 Table 1 — Capacity / Comparative Evaluation
+# 15. Computational Environment & Execution Workflow
 
-The values reported in Table 1 are derived from the image-characterization, capacity-estimation, and comparative experimental outputs generated during the experiments.
-
-Relevant execution and analysis artifacts are available under:
-
-```text
-output/output_modules/
-```
-
-including:
-
-```text
-capacity_estimation_Execution.txt
-image_acquisition_Execution.txt
-```
-
-and the corresponding generated datasets and analysis outputs.
-
-The underlying numerical results can therefore be traced to the experimental outputs retained in the repository rather than to a separate table-generation script.
-
----
-
-## 16.2 Table 2 — End-to-End System Evaluation
-
-The values reported in Table 2 are derived from the end-to-end StegaQEntropy execution and the corresponding adaptive-embedding, extraction, verification, and post-embedding analysis outputs.
-
-Relevant artifacts include:
-
-```text
-output/StegaQEntropy_Execution.txt
-```
-
-and:
-
-```text
-output/adaptive_embedding/
-output/dwt_decomposition/
-output/message_preparation/
-output/quantum_key_hierarchy/
-```
-
-as well as the machine-learning and post-embedding analysis outputs under:
-
-```text
-ml_module/output/
-```
-
-The reported values in Table 2 were assembled from these experimental results.
-
-No separate `generate_table2.py` script is required because the table is a presentation of values produced by the underlying experimental pipeline.
-
----
-
-## 16.3 Table 3 — Ablation / Component Analysis
-
-The values reported in Table 3 are obtained from the corresponding component-level experimental analyses.
-
-The relevant artifacts include the outputs associated with:
-
-```text
-SQE-Net
-QOQA/QAOA
-ACER
-QRNG
-DWT
-Adaptive Embedding
-```
-
-together with the corresponding machine-learning datasets, execution logs, quantum visualizations, and post-embedding analysis.
-
-The repository retains these underlying experimental artifacts so that the reported values can be inspected against the generated results.
-
----
-
-## 16.4 Supplementary Table S2
-
-Supplementary Table S2 is similarly assembled from the corresponding experimental outputs retained in the repository.
-
-The relevant supporting material includes:
-
-```text
-ml_module/output/
-qrng/output/
-output/adaptive_embedding/
-output/dwt_decomposition/
-output/quantum_key_hierarchy/
-```
-
-and the associated execution records under:
-
-```text
-output/output_modules/
-```
-
-The supplementary table is therefore a consolidated presentation of experimental results rather than the output of a dedicated table-generation script.
-
----
-
-## 16.5 Reproducibility Principle
-
-The repository follows the following traceability chain:
-
-```text
-Source Code
-     │
-     ▼
-Experimental Execution
-     │
-     ▼
-Generated Datasets / Metrics / Logs
-     │
-     ▼
-Analysis Outputs
-     │
-     ▼
-Manuscript Tables
-```
-
-Thus, the purpose of the repository is to preserve the **actual computational evidence and intermediate results from which the manuscript tables were prepared**, rather than to introduce artificial table-generation scripts that were not part of the original experimental workflow.
-
-This ensures that the repository accurately represents the experimental procedure used to obtain the reported results.
-
-# 17. Experimental Traceability
-
-The repository contains execution logs corresponding to the major modules.
-
-The execution records are available under:
-
-```text
-output/output_modules/
-```
-
-including:
-
-```text
-capacity_estimation_Execution.txt
-dataset_builder_Execution.txt
-dwt_decomposition_Execution.txt
-entropy_intelligence_engine_Execution.txt
-gaussian_probability_plot_Execution.txt
-history_checker_Execution.txt
-image_acquisition_Execution.txt
-message_preparation_Execution.txt
-post_embedding_analysis_fixed_Execution.txt
-qrng_randomness_engine_Execution.txt
-quantum_key_hierarchy_Execution.txt
-surrogate_model_Execution.txt
-```
-
-These records provide additional traceability between the implementation stages and the generated experimental artifacts.
-
----
-
-# 18. Experimental Artifacts
-
-The repository includes supporting artifacts generated during the reported experiments, including:
-
-### DWT
-
-```text
-LL.npy
-LH.npy
-HL.npy
-HH.npy
-```
-
-### Adaptive Embedding
-
-```text
-adaptive_embedding_metrics.json
-adaptive_embedding_plan.json
-adaptive_stego.npy
-extracted_message.bin
-```
-
-### Machine Learning
-
-```text
-master_dataset.csv
-dataset_statistics.json
-actual_post_embedding_ml_dataset.csv
-actual_post_embedding_ml_targets.csv
-actual_region_prediction_summary.csv
-```
-
-### Quantum Key Management
-
-```text
-hierarchy.json
-qkd_plan.json
-qkd_package.json
-chunk_key_mapping.json
-security_analysis.json
-```
-
-### QRNG
-
-```text
-qrng_pool.bin
-qrng_statistics.txt
-randomness_report.txt
-qrng_final_report.txt
-```
-
-### Seed Verification
-
-```text
-history_database.txt
-history_summary.txt
-final_verified_seeds/
-```
-
----
-
-# 19. Computational Environment
-
-A pinned dependency file is provided as:
-
-```text
-requirements.txt
-```
-
-The purpose of this file is to record the software environment used for the reported experiments and improve reproducibility.
-
-The environment should include the exact versions used for:
-
-* Python
-* Qiskit
-* Qiskit Aer
-* IBM Quantum Runtime, where applicable
-* NumPy
-* SciPy
-* PyTorch
-* scikit-learn
-* PyWavelets
-* Pandas
-* Matplotlib
-* Pillow
-* scikit-image
-
-Install the environment using:
-
+### Step 1 — Install Dependencies
 ```bash
+git clone [https://github.com/Srinivas-Rao-B/StegaQEntropy.git](https://github.com/Srinivas-Rao-B/StegaQEntropy.git)
+cd StegaQEntropy
 pip install -r requirements.txt
 ```
 
-The versions in `requirements.txt` should correspond to the environment used to generate the final reported results.
-
----
-
-# 20. Ideal Aer Simulation Disclosure
-
-The BB84/QKD simulation used in the experimental workflow is performed using the Qiskit Aer simulator under the configured ideal simulation conditions.
-
-The reported QBER of zero corresponds to the ideal simulation environment and should not be interpreted as a measurement obtained from a physical optical QKD channel.
-
-The repository retains the relevant backend and execution information to make the simulation environment explicit.
-
----
-
-# 21. Reproducibility Workflow
-
-A typical reproduction workflow is:
-
-### Step 1 — Create the environment
+### Step 2 — Run the Master Pipeline (`main.py`)
+Run `main.py` and select **`0. Run Complete Pipeline`** (or execute stages `1` through `11` sequentially) to generate all intermediate features, surrogate predictions, and QKD key hierarchies:
 
 ```bash
-python -m venv .venv
+python main.py
 ```
 
-Activate the environment.
-
-### Windows
-
-```bash
-.venv\Scripts\activate
-```
-
-### Linux/macOS
-
-```bash
-source .venv/bin/activate
-```
-
-### Step 2 — Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### Step 3 — Obtain benchmark images
-
-Use the provided acquisition mechanism:
-From earlier step
-
-### Step 4 — Run preprocessing
-
-```bash
-python src/capacity_estimation.py
-python src/dwt_decomposition.py
-python src/entropy_intelligence_engine.py
-```
-
-### Step 5 — Run machine-learning / surrogate processing
-
-```bash
-python ml_module/surrogate_model.py
-```
-
-or execute the configured ML workflow documented by the source modules.
-
-### Step 6 — Run quantum optimization
-
-Execute the configured QOQA/QAOA and ACER components.
-
-### Step 7 — Run QRNG verification
-
-Use the retained QRNG bitstream and NIST analysis:
-
-```bash
-python qrng/nist_suite/run_nist_suite.py --bitstream qrng/bitstreams/ibm_fez_32q_run.bin
-```
-
-### Step 8 — Run adaptive embedding
-
-Receiver:
-
-```bash
-python src/adaptive_embedding.py receiver
-```
-
-Sender:
-
-```bash
-python src/adaptive_embedding.py sender
-```
-
-### Step 9 — Verify extraction
-
-Compare the extracted payload with the original payload and inspect the generated verification artifacts.
-
-
-## Note
-
-This above mentioned flow is an abstract view
-To execute all the files in order, please refer the pipeline by running main.py
-
-as we get:
-
+```text
 ======================================================================
-                 STEGAQENTROPY
+                  STEGAQENTROPY
      HYBRID QUANTUM STEGANOGRAPHY SYSTEM
 ======================================================================
 
@@ -979,5 +327,7 @@ SELECT EXECUTION MODE
 9. Post Embedding Analysis
 10. Gaussian Probability Plot
 11. Surrogate Model
+```
 
-followed by adaptive_embedding.py to embed and transmit stego image.
+### Step 3 — Embed, Transmit, and Verify Extraction
+Execute `src/adaptive_embedding.py` (single-terminal or sender/receiver mode) and inspect `output/adaptive_embedding/adaptive_embedding_metrics.json` to verify zero payload bit errors ($\text{BER} = 0$) and bit-exact cover restoration ($\text{MSE}_{\text{recon}} = 0$).
